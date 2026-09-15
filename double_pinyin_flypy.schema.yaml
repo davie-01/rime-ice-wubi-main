@@ -21,7 +21,8 @@ schema:
   author:
     - Dvel
   description: |
-    雾凇拼音 - 小鹤双拼
+    雾凇拼音 - 小鹤双拼（全拼混输版）
+    全拼与双拼均可输入，候选注释显示小鹤双拼编码
     https://github.com/iDvel/rime-ice
   dependencies:
     - melt_eng        # 英文输入，作为次翻译器挂载到拼音方案
@@ -83,7 +84,7 @@ engine:
     - lua_translator@*calc_translator    # 计算器
     - lua_translator@*force_gc           # 暴力 GC
   filters:
-    - lua_filter@*corrector                         # 错音错字提示
+    # - lua_filter@*corrector                       # 错音错字提示（与下面的双拼编码提示共用 comment，二选一）
     - reverse_lookup_filter@radical_reverse_lookup  # 部件拆字滤镜
     - lua_filter@*autocap_filter                    # 英文自动大写
     - lua_filter@*pin_cand_filter                   # 置顶候选项（顺序要求：置顶候选项 > Emoji > 简繁切换）
@@ -165,13 +166,43 @@ translator:
   enable_word_completion: true  # 大于 4 音节的词条自动补全，librime > 1.11.2
   # max_sentences: 3            # 造句数量，偏好长句输入可设置大于 1，librime ≥ 1.17.0
   prism: double_pinyin_flypy    # 多方案共用一个词库时，为避免冲突，需要用 prism 指定一个名字。
-  spelling_hints: 8             # corrector.lua ：为了让错音错字提示的 Lua 同时适配全拼双拼，将拼音显示在 comment 中
-  always_show_comments: true    # corrector.lua ：Rime 默认在 preedit 等于 comment 时取消显示 comment，这里强制一直显示，供 corrector.lua 做判断用。
+  spelling_hints: 12            # 生成注音（全拼），再由下面的 comment_format 换算成双拼编码；数字为最大音节数
+  always_show_comments: true    # Rime 默认在 preedit 等于 comment 时不显示 comment，这里强制一直显示编码
   # keep_comments: true         # corrector.lua ：显示拼音注释
   initial_quality: 1.2          # 拼音的权重应该比英文大
-  comment_format:               # 标记拼音注释，供 corrector.lua 做判断用
-    - xform/^/［/
-    - xform/$/］/
+  comment_format:               # 把 spelling_hints 生成的全拼注释换算成小鹤双拼编码，直接显示在候选项后面
+    # 规则与 speller/algebra 同序，按音节边界匹配，所以整词也能逐音节换算
+    - xform/(^|[ '])([aoe])([ioun])(?=$|[ '])/$1$2$2$3/
+    - xform/(^|[ '])([aoe])(ng)?(?=$|[ '])/$1$2$2$3/
+    - xform/iu(?=$|[ '])/Ⓠ/
+    - xform/(.)ei(?=$|[ '])/$1Ⓦ/
+    - xform/uan(?=$|[ '])/Ⓡ/
+    - xform/[uv]e(?=$|[ '])/Ⓣ/
+    - xform/un(?=$|[ '])/Ⓨ/
+    - xform/(^|[ '])sh/$1Ⓤ/
+    - xform/(^|[ '])ch/$1Ⓘ/
+    - xform/(^|[ '])zh/$1Ⓥ/
+    - xform/uo(?=$|[ '])/Ⓞ/
+    - xform/ie(?=$|[ '])/Ⓟ/
+    - xform/(.)i?ong(?=$|[ '])/$1Ⓢ/
+    - xform/(?:ing|uai)(?=$|[ '])/Ⓚ/
+    - xform/(.)ai(?=$|[ '])/$1Ⓓ/
+    - xform/(.)en(?=$|[ '])/$1Ⓕ/
+    - xform/(.)eng(?=$|[ '])/$1Ⓖ/
+    - xform/[iu]ang(?=$|[ '])/Ⓛ/
+    - xform/(.)ang(?=$|[ '])/$1Ⓗ/
+    - xform/ian(?=$|[ '])/Ⓜ/
+    - xform/(.)an(?=$|[ '])/$1Ⓙ/
+    - xform/(.)ou(?=$|[ '])/$1Ⓩ/
+    - xform/[iu]a(?=$|[ '])/Ⓧ/
+    - xform/iao(?=$|[ '])/Ⓝ/
+    - xform/(.)ao(?=$|[ '])/$1Ⓒ/
+    - xform/ui(?=$|[ '])/Ⓥ/
+    - xform/in(?=$|[ '])/Ⓑ/
+    - xlit/ⓆⓌⓇⓉⓎⓊⒾⓄⓅⓈⒹⒻⒼⒽⒿⓀⓁⓏⓍⒸⓋⒷⓃⓂ/qwrtyuiopsdfghjklzxcvbnm/
+    - xform/[ ']//                # 去掉音节间的分隔，与实际按键完全一致：你好 → nihc
+    # - xform/^/［/               # 如需给编码加括号，取消这两行注释
+    # - xform/$/］/
   preedit_format:               # preedit_format 影响到输入框的显示和“Shift+回车”上屏的字符
     - xform/(^|[ '])aa/$1a/
     - xform/(^|[ '])ee/$1e/
@@ -338,34 +369,37 @@ speller:
   initials: zyxwvutsrqponmlkjihgfedcbaZYXWVUTSRQPONMLKJIHGFEDCBA
   delimiter: " '"  # 第一位<空格>是拼音之间的分隔符；第二位<'>表示可以手动输入单引号来分割拼音。
   algebra:
+    # 全拼 + 双拼混输：下面原本是 xform（把全拼改写成双拼，全拼随之失效），
+    # 改成 derive 后「保留全拼、同时增加双拼」，两种输入方式都能用。
+    # 候选后面的绿色提示码始终是小鹤双拼码 —— 打全拼时正好能顺带记键位。
     - erase/^xx$/
     - derive/^([jqxy])u$/$1v/
     - derive/^([aoe])([ioun])$/$1$1$2/
-    - xform/^([aoe])(ng)?$/$1$1$2/
-    - xform/iu$/Ⓠ/
-    - xform/(.)ei$/$1Ⓦ/
-    - xform/uan$/Ⓡ/
-    - xform/[uv]e$/Ⓣ/
-    - xform/un$/Ⓨ/
-    - xform/^sh/Ⓤ/
-    - xform/^ch/Ⓘ/
-    - xform/^zh/Ⓥ/
-    - xform/uo$/Ⓞ/
-    - xform/ie$/Ⓟ/
-    - xform/(.)i?ong$/$1Ⓢ/
-    - xform/ing$|uai$/Ⓚ/
-    - xform/(.)ai$/$1Ⓓ/
-    - xform/(.)en$/$1Ⓕ/
-    - xform/(.)eng$/$1Ⓖ/
-    - xform/[iu]ang$/Ⓛ/
-    - xform/(.)ang$/$1Ⓗ/
-    - xform/ian$/Ⓜ/
-    - xform/(.)an$/$1Ⓙ/
-    - xform/(.)ou$/$1Ⓩ/
-    - xform/[iu]a$/Ⓧ/
-    - xform/iao$/Ⓝ/
-    - xform/(.)ao$/$1Ⓒ/
-    - xform/ui$/Ⓥ/
-    - xform/in$/Ⓑ/
+    - derive/^([aoe])(ng)?$/$1$1$2/
+    - derive/iu$/Ⓠ/
+    - derive/(.)ei$/$1Ⓦ/
+    - derive/uan$/Ⓡ/
+    - derive/[uv]e$/Ⓣ/
+    - derive/un$/Ⓨ/
+    - derive/^sh/Ⓤ/
+    - derive/^ch/Ⓘ/
+    - derive/^zh/Ⓥ/
+    - derive/uo$/Ⓞ/
+    - derive/ie$/Ⓟ/
+    - derive/(.)i?ong$/$1Ⓢ/
+    - derive/ing$|uai$/Ⓚ/
+    - derive/(.)ai$/$1Ⓓ/
+    - derive/(.)en$/$1Ⓕ/
+    - derive/(.)eng$/$1Ⓖ/
+    - derive/[iu]ang$/Ⓛ/
+    - derive/(.)ang$/$1Ⓗ/
+    - derive/ian$/Ⓜ/
+    - derive/(.)an$/$1Ⓙ/
+    - derive/(.)ou$/$1Ⓩ/
+    - derive/[iu]a$/Ⓧ/
+    - derive/iao$/Ⓝ/
+    - derive/(.)ao$/$1Ⓒ/
+    - derive/ui$/Ⓥ/
+    - derive/in$/Ⓑ/
     - xlit/ⓆⓌⓇⓉⓎⓊⒾⓄⓅⓈⒹⒻⒼⒽⒿⓀⓁⓏⓍⒸⓋⒷⓃⓂ/qwrtyuiopsdfghjklzxcvbnm/
     # - abbrev/^(.).+$/$1/  # 首字母简拼，开启后会导致 3 个字母时 kj'x 变成 k'jx 的问题

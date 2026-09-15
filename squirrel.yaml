@@ -35,6 +35,14 @@ show_notifications_when: appropriate
 # ascii_mode、inline、no_inline、vim_mode 等等设定
 # 可参考 /Library/Input Methods/Squirrel.app/Contents/SharedSupport/squirrel.yaml
 app_options:
+  com.apple.Terminal:         # 系统自带「终端」
+    ascii_mode: true
+  com.termius-dmg.mac:        # Termius（第三方 SSH 客户端）
+    ascii_mode: true
+  # com.googlecode.iterm2:    # iTerm2
+  #   ascii_mode: true
+  # com.microsoft.VSCode:     # VS Code
+  #   ascii_mode: true
   # com.apple.Spotlight:
   #   ascii_mode: true    # 开启默认英文
   # com.microsoft.VSCode:
@@ -49,7 +57,7 @@ style:
   # 以下是预设选项。如果皮肤没写，则使用这些属性；如果皮肤写了，使用皮肤的。
 
   # 候选框与文字的排列方式
-  candidate_list_layout: stacked  # stacked | linear       皮肤横竖排显示是调整这个
+  candidate_list_layout: linear  # stacked | linear       皮肤横竖排显示是调整这个
   text_orientation: horizontal    # horizontal | vertical  文字方向
   # 拼音或词句是否显示在键入位置
   inline_preedit: true            # true | false  键入码显示位置
@@ -118,8 +126,8 @@ preset_color_schemes:
     hilited_candidate_label_color: 0x4C4C4C # 选中序号颜色
     candidate_text_color: 0xEEEEEE          # 文字颜色
     hilited_candidate_text_color: 0x000000  # 选中文字颜色
-    comment_text_color: 0x808080            # 注颜色
-    hilited_comment_text_color: 0x808080    # 选中注颜色
+    comment_text_color: 0x5AC461            # 注颜色（编码提示）— 取自极点五笔皮肤的绿色
+    hilited_comment_text_color: 0x5AC461    # 选中注颜色
     text_color: 0x808080                    # 拼音颜色 （inline_preedit: false）
     hilited_text_color: 0xEEEEEE            # 选中拼音颜色 （inline_preedit: false）
     # candidate_back_color:                 # 候选项底色
